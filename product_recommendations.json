@@ -1,0 +1,81 @@
+{
+    "oily": {
+        "routine": "Morning: Gentle foaming cleanser, oil-free moisturizer, SPF\nEvening: Double cleanse, BHA treatment, lightweight moisturizer",
+        "products": [
+            {
+                "name": "CeraVe Foaming Cleanser",
+                "price": 15,
+                "ingredients": [
+                    "Ceramides",
+                    "Niacinamide",
+                    "Hyaluronic Acid"
+                ]
+            },
+            {
+                "name": "Paula's Choice 2% BHA",
+                "price": 30,
+                "ingredients": [
+                    "Salicylic Acid",
+                    "Green Tea"
+                ]
+            }
+        ],
+        "home_remedies": [
+            "Clay mask twice weekly",
+            "Green tea toner",
+            "Avoid heavy oils"
+        ]
+    },
+    "dry": {
+        "routine": "Morning: Cream cleanser, hydrating toner, rich moisturizer, SPF\nEvening: Oil cleanser, hydrating serum, night cream",
+        "products": [
+            {
+                "name": "CeraVe Hydrating Cleanser",
+                "price": 15,
+                "ingredients": [
+                    "Ceramides",
+                    "Hyaluronic Acid"
+                ]
+            },
+            {
+                "name": "La Roche-Posay Cicaplast",
+                "price": 25,
+                "ingredients": [
+                    "Panthenol",
+                    "Shea Butter"
+                ]
+            }
+        ],
+        "home_remedies": [
+            "Honey mask",
+            "Avocado face mask",
+            "Facial oils"
+        ]
+    },
+    "normal": {
+        "routine": "Morning: Gentle cleanser, moisturizer, SPF\nEvening: Cleanser, treatment serum, night moisturizer",
+        "products": [
+            {
+                "name": "Cetaphil Gentle Cleanser",
+                "price": 12,
+                "ingredients": [
+                    "Glycerin",
+                    "Panthenol"
+                ]
+            },
+            {
+                "name": "Neutrogena Hydroboost",
+                "price": 20,
+                "ingredients": [
+                    "Hyaluronic Acid",
+                    "Glycerin"
+                ]
+            }
+        ],
+        "home_remedies": [
+            "Yogurt mask",
+            "Aloe vera gel",
+            "Regular exfoliation"
+        ]
+    }
+}
