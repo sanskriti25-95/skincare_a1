@@ -226,7 +226,7 @@ class SkinAnalysisApp:
         return questions
 
     def analyze_skin_type(self, image, answers):
-        # Get model prediction
+        # Get model prediction (reduce weight to 30%)
         img = Image.open(image)
         img = img.resize((224, 224))
         img_array = tf.keras.preprocessing.image.img_to_array(img)
@@ -235,42 +235,40 @@ class SkinAnalysisApp:
         
         prediction = self.model.predict(img_array)
         skin_types = ['dry', 'normal', 'oily']
-        predicted_class = np.argmax(prediction[0])
-        confidence = prediction[0][predicted_class] * 100
         
-        # Initialize scoring system with model prediction weight
+        # Initialize scoring system
         skin_scores = {
-            'dry': prediction[0][0] * 50,    # Model contributes 50% of initial score
-            'normal': prediction[0][1] * 50,
-            'oily': prediction[0][2] * 50
+            'dry': prediction[0][0] * 30,    # Model contributes 30% of initial score
+            'normal': prediction[0][1] * 30,
+            'oily': prediction[0][2] * 30
         }
         
-        # Analyze skin characteristics (30% weight)
+        # Analyze skin characteristics (40% weight)
         skin_feel_map = {
-            "Tight and uncomfortable": {'dry': 3, 'normal': 0, 'oily': 0},
-            "Slightly dry but comfortable": {'dry': 2, 'normal': 1, 'oily': 0},
-            "Normal and comfortable": {'dry': 0, 'normal': 3, 'oily': 0},
-            "Slightly oily in T-zone": {'dry': 0, 'normal': 1, 'oily': 2},
-            "Oily all over": {'dry': 0, 'normal': 0, 'oily': 3}
+            "Tight and uncomfortable": {'dry': 15, 'normal': 0, 'oily': 0},
+            "Slightly dry but comfortable": {'dry': 10, 'normal': 5, 'oily': 0},
+            "Normal and comfortable": {'dry': 0, 'normal': 15, 'oily': 0},
+            "Slightly oily in T-zone": {'dry': 0, 'normal': 5, 'oily': 10},
+            "Oily all over": {'dry': 0, 'normal': 0, 'oily': 15}
         }
         
         morning_skin_map = {
-            "Dry and flaky": {'dry': 3, 'normal': 0, 'oily': 0},
-            "Normal": {'dry': 0, 'normal': 3, 'oily': 0},
-            "Slightly oily": {'dry': 0, 'normal': 1, 'oily': 2},
-            "Very oily": {'dry': 0, 'normal': 0, 'oily': 3},
-            "Combination (oily T-zone, dry cheeks)": {'dry': 1, 'normal': 2, 'oily': 1}
+            "Dry and flaky": {'dry': 15, 'normal': 0, 'oily': 0},
+            "Normal": {'dry': 0, 'normal': 15, 'oily': 0},
+            "Slightly oily": {'dry': 0, 'normal': 5, 'oily': 10},
+            "Very oily": {'dry': 0, 'normal': 0, 'oily': 15},
+            "Combination (oily T-zone, dry cheeks)": {'dry': 5, 'normal': 10, 'oily': 5}
         }
         
         pore_size_map = {
-            "Almost invisible": {'dry': 2, 'normal': 1, 'oily': 0},
-            "Small and fine": {'dry': 1, 'normal': 2, 'oily': 0},
-            "Visible on nose only": {'dry': 0, 'normal': 2, 'oily': 1},
-            "Visible on T-zone": {'dry': 0, 'normal': 1, 'oily': 2},
-            "Large and visible across face": {'dry': 0, 'normal': 0, 'oily': 3}
+            "Almost invisible": {'dry': 10, 'normal': 5, 'oily': 0},
+            "Small and fine": {'dry': 5, 'normal': 10, 'oily': 0},
+            "Visible on nose only": {'dry': 0, 'normal': 10, 'oily': 5},
+            "Visible on T-zone": {'dry': 0, 'normal': 5, 'oily': 10},
+            "Large and visible across face": {'dry': 0, 'normal': 0, 'oily': 10}
         }
         
-        # Apply skin characteristic scores
+        # Apply skin characteristic scores with higher weight
         feel_scores = skin_feel_map[answers['skin_characteristics']['skin_feel']]
         morning_scores = morning_skin_map[answers['skin_characteristics']['morning_skin']]
         pore_scores = pore_size_map[answers['skin_characteristics']['pore_size']]
@@ -278,59 +276,56 @@ class SkinAnalysisApp:
         for skin_type in skin_scores:
             skin_scores[skin_type] += (feel_scores[skin_type] + 
                                      morning_scores[skin_type] + 
-                                     pore_scores[skin_type]) * 3  # Weight of 30%
+                                     pore_scores[skin_type])
         
-        # Environmental factors (10% weight)
-        climate_map = {
-            "Tropical/Humid": {'dry': 0, 'normal': 1, 'oily': 2},
-            "Hot and Dry": {'dry': 2, 'normal': 1, 'oily': 0},
-            "Moderate": {'dry': 1, 'normal': 2, 'oily': 1},
-            "Cold and Dry": {'dry': 3, 'normal': 0, 'oily': 0},
-            "Coastal/Humid": {'dry': 0, 'normal': 1, 'oily': 2}
-        }
-        
-        climate_scores = climate_map[answers['basic_info']['location_climate']]
-        for skin_type in skin_scores:
-            skin_scores[skin_type] += climate_scores[skin_type] * 2  # Weight of 10%
-        
-        # Lifestyle factors (10% weight)
-        if answers['lifestyle_factors']['water_intake'] in ['Less than 4 glasses', '4-6 glasses']:
-            skin_scores['dry'] += 2
-        
-        if answers['lifestyle_factors']['sleep_quality'] in ['Poor (less than 5 hours)', 'Fair (5-6 hours)']:
-            skin_scores['dry'] += 1
-        
-        if answers['lifestyle_factors']['stress_level'] in ['High', 'Very high']:
-            skin_scores['oily'] += 1
-        
-        # Skin concerns validation
-        if answers['skin_concerns']['primary_concern'] == "Dryness and flaking":
-            skin_scores['dry'] += 2
-        elif answers['skin_concerns']['primary_concern'] == "Oiliness and shine":
-            skin_scores['oily'] += 2
+        # Add strong validation checks (30% weight)
+        # Check for oily indicators
+        if answers['skin_concerns']['primary_concern'] == "Oiliness and shine":
+            skin_scores['oily'] += 20
+            skin_scores['dry'] -= 10
         
         if "Blackheads" in answers['skin_concerns']['specific_issues'] or "Whiteheads" in answers['skin_concerns']['specific_issues']:
-            skin_scores['oily'] += 1
+            skin_scores['oily'] += 10
+            skin_scores['dry'] -= 5
         
-        # Normalize scores to percentages
-        total_score = sum(skin_scores.values())
+        # Check for dry indicators
+        if answers['skin_concerns']['primary_concern'] == "Dryness and flaking":
+            skin_scores['dry'] += 20
+            skin_scores['oily'] -= 10
+        
+        if "Eczema" in answers['skin_concerns']['specific_issues']:
+            skin_scores['dry'] += 10
+            skin_scores['oily'] -= 5
+        
+        # Climate adjustments
+        climate = answers['basic_info']['location_climate']
+        if climate in ["Tropical/Humid", "Coastal/Humid"]:
+            skin_scores['oily'] += 5
+            skin_scores['dry'] -= 5
+        elif climate in ["Hot and Dry", "Cold and Dry"]:
+            skin_scores['dry'] += 5
+            skin_scores['oily'] -= 5
+        
+        # Ensure no negative scores
         for skin_type in skin_scores:
-            skin_scores[skin_type] = (skin_scores[skin_type] / total_score) * 100
+            skin_scores[skin_type] = max(0, skin_scores[skin_type])
         
-        # Determine final skin type
+        # Normalize scores
+        total_score = sum(skin_scores.values())
+        if total_score > 0:  # Avoid division by zero
+            for skin_type in skin_scores:
+                skin_scores[skin_type] = (skin_scores[skin_type] / total_score) * 100
+        
+        # Determine final skin type with bias correction
         final_type = max(skin_scores, key=skin_scores.get)
         confidence = skin_scores[final_type]
         
-        # Add confidence levels to the output
-        confidence_levels = {
-            skin_type: {
-                'score': score,
-                'confidence': 'High' if score > 60 else 'Medium' if score > 40 else 'Low'
-            }
-            for skin_type, score in skin_scores.items()
-        }
+        # Add combination skin detection
+        if abs(skin_scores['oily'] - skin_scores['dry']) < 15:  # Close scores indicate combination
+            if skin_scores['normal'] > 30:
+                final_type = 'normal'  # Lean towards normal if scores are close
         
-        return final_type, confidence, confidence_levels
+        return final_type, confidence, skin_scores
 
     def get_recommendations(self, skin_type, answers):
         budget_ranges = {
@@ -342,27 +337,261 @@ class SkinAnalysisApp:
         }
         max_budget = budget_ranges[answers['product_preferences']['budget_range']]
         
-        recs = self.recommendations[skin_type]
+        # Define product database from the comprehensive list
+        product_database = {
+            'oily': {
+                'cleansers': [
+                    {
+                        'name': 'Neutrogena Oil-Free Acne Wash',
+                        'price': 475,
+                        'key_ingredients': ['Salicylic Acid', 'Aloe'],
+                        'description': 'Oil-free formula for acne-prone skin'
+                    },
+                    {
+                        'name': 'Himalaya Purifying Neem Face Wash',
+                        'price': 85,
+                        'key_ingredients': ['Neem', 'Turmeric'],
+                        'description': 'Natural neem-based cleanser'
+                    },
+                    {
+                        'name': 'The Face Shop Rice Water Bright Cleansing Foam',
+                        'price': 450,
+                        'key_ingredients': ['Rice Extract', 'Ceramides'],
+                        'description': 'Brightening and oil-control'
+                    }
+                ],
+                'moisturizers': [
+                    {
+                        'name': 'Sebamed Clear Face Gel',
+                        'price': 479,
+                        'key_ingredients': ['Hyaluronic Acid', 'Aloe Vera'],
+                        'description': 'Non-comedogenic gel moisturizer'
+                    },
+                    {
+                        'name': 'Neutrogena Hydro Boost Water Gel',
+                        'price': 850,
+                        'key_ingredients': ['Hyaluronic Acid', 'Glycerin'],
+                        'description': 'Oil-free hydration'
+                    }
+                ],
+                'treatments': [
+                    {
+                        'name': 'The Body Shop Tea Tree Oil',
+                        'price': 895,
+                        'key_ingredients': ['Tea Tree Oil'],
+                        'description': 'Spot treatment for acne'
+                    },
+                    {
+                        'name': 'Minimalist Salicylic Acid 2%',
+                        'price': 549,
+                        'key_ingredients': ['Salicylic Acid', 'Tea Tree'],
+                        'description': 'Exfoliating serum for acne'
+                    }
+                ]
+            },
+            'dry': {
+                'cleansers': [
+                    {
+                        'name': 'Cetaphil Gentle Skin Cleanser',
+                        'price': 300,
+                        'key_ingredients': ['Glycerin', 'Panthenol'],
+                        'description': 'Gentle non-stripping cleanser'
+                    },
+                    {
+                        'name': 'Forest Essentials Delicate Facial Cleanser',
+                        'price': 1175,
+                        'key_ingredients': ['Honey', 'Aloe'],
+                        'description': 'Nourishing cream cleanser'
+                    }
+                ],
+                'moisturizers': [
+                    {
+                        'name': 'Bioderma Atoderm Intensive Baume',
+                        'price': 1450,
+                        'key_ingredients': ['Ceramides', 'Glycerin'],
+                        'description': 'Rich moisturizer for very dry skin'
+                    },
+                    {
+                        'name': 'Embryolisse Lait-Crème Concentré',
+                        'price': 2200,
+                        'key_ingredients': ['Shea Butter', 'Aloe'],
+                        'description': 'Multi-purpose moisturizing cream'
+                    }
+                ]
+            },
+            'normal': {
+                'cleansers': [
+                    {
+                        'name': 'Simple Kind To Skin Refreshing Facial Wash',
+                        'price': 375,
+                        'key_ingredients': ['Pro-Vitamin B5', 'Vitamin E'],
+                        'description': 'Gentle daily cleanser'
+                    },
+                    {
+                        'name': 'Cetaphil Gentle Skin Cleanser',
+                        'price': 300,
+                        'key_ingredients': ['Glycerin', 'Panthenol'],
+                        'description': 'Mild non-irritating cleanser'
+                    }
+                ],
+                'moisturizers': [
+                    {
+                        'name': 'Neutrogena Oil-Free Moisture Combination Skin',
+                        'price': 450,
+                        'key_ingredients': ['Glycerin', 'Vitamin E'],
+                        'description': 'Lightweight daily moisturizer'
+                    },
+                    {
+                        'name': 'Clinique Dramatically Different Moisturizing Gel',
+                        'price': 2400,
+                        'key_ingredients': ['Hyaluronic Acid', 'Glycerin'],
+                        'description': 'Oil-free hydrating gel'
+                    }
+                ]
+            }
+        }
+
+        # Filter products based on budget
+        affordable_products = {}
+        for category, products in product_database[skin_type].items():
+            affordable_products[category] = [p for p in products if p['price'] <= max_budget]
         
-        # Handle both old and new product formats
-        if isinstance(recs['products'], list):
-            affordable_products = [p for p in recs['products'] if p['price'] <= max_budget]
-        else:
-            affordable_products = recs['products']  # Already categorized from API
+        return {
+            'routine': self.recommendations[skin_type]['routine'],
+            'products': affordable_products,
+            'home_remedies': self.recommendations[skin_type]['home_remedies'],
+            'lifestyle_tips': self.get_lifestyle_tips(answers)
+        }
+
+    def display_product_recommendations(self, products, budget_range):
+        st.subheader("Recommended Products Within Your Budget")
         
-        # Additional lifestyle recommendations
+        for category, items in products.items():
+            st.write(f"\n**{category.title()}**")
+            if items:
+                for product in items:
+                    st.write(f"**{product['name']}**")
+                    st.write(f"₹{product['price']}")
+                    st.write(f"Key ingredients: {', '.join(product['key_ingredients'])}")
+                    st.write(f"_{product['description']}_")
+                    st.write("---")
+            else:
+                st.write("No products found in this category within your budget.")
+
+    def validate_face_image(self, image):
+        """
+        Validate that the uploaded image contains a clearly visible face
+        Returns: (is_valid, message)
+        """
+        try:
+            # Convert PIL Image to CV2 format
+            img = Image.open(image)
+            img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+            
+            # Load multiple face detection classifiers
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            face_cascade_alt = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt.xml')
+            face_cascade_alt2 = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt2.xml')
+            
+            # Convert to grayscale
+            gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+            
+            # Enhance image contrast
+            gray = cv2.equalizeHist(gray)
+            
+            # Try different detection parameters
+            faces = []
+            scale_factors = [1.1, 1.15, 1.2]
+            min_neighbors_options = [3, 4, 5]
+            
+            for scale in scale_factors:
+                for min_neighbors in min_neighbors_options:
+                    # Try with different classifiers
+                    faces_default = face_cascade.detectMultiScale(
+                        gray,
+                        scaleFactor=scale,
+                        minNeighbors=min_neighbors,
+                        minSize=(60, 60),
+                        flags=cv2.CASCADE_SCALE_IMAGE
+                    )
+                    
+                    faces_alt = face_cascade_alt.detectMultiScale(
+                        gray,
+                        scaleFactor=scale,
+                        minNeighbors=min_neighbors,
+                        minSize=(60, 60),
+                        flags=cv2.CASCADE_SCALE_IMAGE
+                    )
+                    
+                    faces_alt2 = face_cascade_alt2.detectMultiScale(
+                        gray,
+                        scaleFactor=scale,
+                        minNeighbors=min_neighbors,
+                        minSize=(60, 60),
+                        flags=cv2.CASCADE_SCALE_IMAGE
+                    )
+                    
+                    # Combine detected faces
+                    if len(faces_default) > 0:
+                        faces = faces_default
+                        break
+                    elif len(faces_alt) > 0:
+                        faces = faces_alt
+                        break
+                    elif len(faces_alt2) > 0:
+                        faces = faces_alt2
+                        break
+                
+                if len(faces) > 0:
+                    break
+            
+            if len(faces) == 0:
+                # Try with reduced constraints if no face detected
+                for cascade in [face_cascade, face_cascade_alt, face_cascade_alt2]:
+                    faces = cascade.detectMultiScale(
+                        gray,
+                        scaleFactor=1.3,
+                        minNeighbors=2,
+                        minSize=(30, 30),
+                        flags=cv2.CASCADE_SCALE_IMAGE
+                    )
+                    if len(faces) > 0:
+                        break
+            
+            if len(faces) == 0:
+                return False, "No face detected in the image. Please upload a clear photo of your face."
+            elif len(faces) > 1:
+                return False, "Multiple faces detected. Please upload a photo with just your face."
+            
+            # Check if face is large enough in the image
+            face_area = faces[0][2] * faces[0][3]  # width * height
+            image_area = img_cv.shape[0] * img_cv.shape[1]
+            face_ratio = face_area / image_area
+            
+            if face_ratio < 0.05:  # Reduced minimum face size requirement
+                return False, "Face is too small in the image. Please upload a closer photo of your face."
+            elif face_ratio < 0.1:  # Reduced warning threshold
+                return True, "Warning: Face appears small in the image. Results might be less accurate."
+            
+            return True, "Valid face image detected."
+            
+        except Exception as e:
+            return False, f"Error processing image. Please try a different photo. Error: {str(e)}"
+
+    def get_lifestyle_tips(self, answers):
+        """Generate lifestyle tips based on questionnaire answers"""
         lifestyle_tips = []
         
-        # Water intake check
+        # Water intake recommendations
         if answers['lifestyle_factors']['water_intake'] in ['Less than 4 glasses', '4-6 glasses']:
             lifestyle_tips.append("Increase water intake to at least 8 glasses per day")
         
-        # Sleep quality check
+        # Sleep recommendations
         sleep_quality = answers['lifestyle_factors']['sleep_quality']
         if sleep_quality in ['Poor (less than 5 hours)', 'Fair (5-6 hours)', 'Good (6-7 hours)']:
             lifestyle_tips.append("Try to get 7-8 hours of sleep for better skin health")
         
-        # Sun exposure check
+        # Sun exposure recommendations
         sun_exposure = answers['lifestyle_factors']['sun_exposure']
         if sun_exposure in ['Moderate (2-4 hours outdoors)', 'High (4+ hours outdoors)']:
             lifestyle_tips.append("Use sunscreen regularly and reapply every 2-3 hours when outdoors")
@@ -378,103 +607,23 @@ class SkinAnalysisApp:
         if answers['lifestyle_factors']['stress_level'] in ['High', 'Very high']:
             lifestyle_tips.append("Consider stress-management techniques like meditation or yoga")
         
-        # Sunscreen advice
-        if answers['lifestyle_factors']['sunscreen_use'] in ['Never', 'Only when outdoors for long']:
-            lifestyle_tips.append("Make sunscreen a daily habit, even on cloudy days")
+        # Climate-based recommendations
+        climate = answers['basic_info']['location_climate']
+        if climate in ["Tropical/Humid", "Coastal/Humid"]:
+            lifestyle_tips.append("Use lightweight, non-comedogenic products in humid weather")
+        elif climate in ["Hot and Dry", "Cold and Dry"]:
+            lifestyle_tips.append("Focus on hydration and moisturizing in dry weather")
         
-        return {
-            'routine': recs['routine'],
-            'products': affordable_products,
-            'home_remedies': recs['home_remedies'],
-            'lifestyle_tips': lifestyle_tips
-        }
-
-    def display_product_recommendations(self, products, budget_range):
-        max_budget = int(budget_range.split('-')[1])
+        # Occupation-based tips
+        occupation = answers['basic_info']['occupation']
+        if occupation in ["Outdoor Work", "Mixed Indoor-Outdoor"]:
+            lifestyle_tips.append("Ensure consistent sun protection throughout the day")
         
-        st.subheader("Recommended Products Within Your Budget")
+        # Skin sensitivity tips
+        if answers['skin_concerns']['sensitivity'] in ["Very sensitive", "Extremely sensitive"]:
+            lifestyle_tips.append("Patch test new products and introduce them gradually")
         
-        # If products is a list (old format)
-        if isinstance(products, list):
-            affordable_products = [p for p in products if p['price'] <= max_budget]
-            if affordable_products:
-                for product in affordable_products:
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        st.write(f"**{product['name']}**")
-                        st.write(f"₹{product['price']}")
-                        if 'ingredients' in product:
-                            st.write(f"Key ingredients: {', '.join(product['ingredients'])}")
-                    with col2:
-                        if st.button(f"Buy {product['name'][:20]}..."):
-                            # Add purchase link logic here
-                            pass
-            else:
-                st.write("No products found within your budget.")
-            
-        # If products is a dictionary (new API format)
-        elif isinstance(products, dict):
-            for category, items in products.items():
-                st.write(f"\n**{category.capitalize()}**")
-                affordable_products = [p for p in items if p['price'] <= max_budget]
-                
-                if affordable_products:
-                    for product in affordable_products:
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            st.write(f"**{product['name']}**")
-                            st.write(f"₹{product['price']} | Rating: {product.get('rating', 'N/A')}")
-                            st.write(f"Source: {product.get('source', 'Unknown')}")
-                            if 'ingredients' in product:
-                                st.write(f"Key ingredients: {', '.join(product['ingredients'])}")
-                        with col2:
-                            if st.button(f"Buy {product['name'][:20]}...", key=f"buy_{category}_{product['name'][:10]}"):
-                                # Add purchase link logic here
-                                pass
-                else:
-                    st.write("No products found in this category within your budget.")
-        else:
-            st.error("Invalid product data format")
-
-    def validate_face_image(self, image):
-        """
-        Validate that the uploaded image contains a clearly visible face
-        Returns: (is_valid, message)
-        """
-        # Convert PIL Image to CV2 format
-        img = Image.open(image)
-        img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-        
-        # Load face detection classifier
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        
-        # Convert to grayscale
-        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
-        
-        # Detect faces
-        faces = face_cascade.detectMultiScale(
-            gray,
-            scaleFactor=1.1,
-            minNeighbors=5,
-            minSize=(100, 100)  # Minimum face size
-        )
-        
-        if len(faces) == 0:
-            return False, "No face detected in the image. Please upload a clear photo of your face."
-        elif len(faces) > 1:
-            return False, "Multiple faces detected. Please upload a photo with just your face."
-        
-        # Check if face is large enough in the image
-        face_area = faces[0][2] * faces[0][3]  # width * height
-        image_area = img_cv.shape[0] * img_cv.shape[1]
-        face_ratio = face_area / image_area
-        
-        if face_ratio < 0.1:  # Face is too small
-            return False, "Face is too small in the image. Please upload a closer photo of your face."
-        elif face_ratio < 0.2:  # Face might be too small
-            return True, "Warning: Face appears small in the image. Results might be less accurate."
-        
-        return True, "Valid face image detected."
+        return lifestyle_tips
 
 def main():
     st.set_page_config(page_title="Indian Skin Analysis System", layout="wide")
