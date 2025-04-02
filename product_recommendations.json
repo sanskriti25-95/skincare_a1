@@ -1,23 +1,14 @@
 {
     "oily": {
-        "routine": "Morning: Gentle foaming cleanser, oil-free moisturizer, SPF\nEvening: Double cleanse, BHA treatment, lightweight moisturizer",
+        "routine": "Morning:\n1. Gentle foaming cleanser\n2. Oil-free moisturizer\n3. Sunscreen\n\nEvening:\n1. Double cleanse\n2. BHA treatment\n3. Light moisturizer",
         "products": [
             {
-                "name": "CeraVe Foaming Cleanser",
-                "price": 15,
-                "ingredients": [
-                    "Ceramides",
-                    "Niacinamide",
-                    "Hyaluronic Acid"
-                ]
+                "name": "Neutrogena Oil-Free Acne Wash",
+                "price": 475
             },
             {
-                "name": "Paula's Choice 2% BHA",
-                "price": 30,
-                "ingredients": [
-                    "Salicylic Acid",
-                    "Green Tea"
-                ]
+                "name": "Sebamed Clear Face Gel",
+                "price": 479
             }
         ],
         "home_remedies": [
@@ -27,23 +18,15 @@
         ]
     },
     "dry": {
-        "routine": "Morning: Cream cleanser, hydrating toner, rich moisturizer, SPF\nEvening: Oil cleanser, hydrating serum, night cream",
+        "routine": "Morning:\n1. Cream cleanser\n2. Hydrating toner\n3. Rich moisturizer\n4. Sunscreen\n\nEvening:\n1. Oil cleanser\n2. Hydrating serum\n3. Night cream",
         "products": [
             {
-                "name": "CeraVe Hydrating Cleanser",
-                "price": 15,
-                "ingredients": [
-                    "Ceramides",
-                    "Hyaluronic Acid"
-                ]
+                "name": "Cetaphil Gentle Skin Cleanser",
+                "price": 300
             },
             {
-                "name": "La Roche-Posay Cicaplast",
-                "price": 25,
-                "ingredients": [
-                    "Panthenol",
-                    "Shea Butter"
-                ]
+                "name": "Bioderma Atoderm Intensive Baume",
+                "price": 1450
             }
         ],
         "home_remedies": [
@@ -53,23 +36,15 @@
         ]
     },
     "normal": {
-        "routine": "Morning: Gentle cleanser, moisturizer, SPF\nEvening: Cleanser, treatment serum, night moisturizer",
+        "routine": "Morning:\n1. Gentle cleanser\n2. Moisturizer\n3. Sunscreen\n\nEvening:\n1. Cleanser\n2. Treatment serum\n3. Night moisturizer",
         "products": [
             {
-                "name": "Cetaphil Gentle Cleanser",
-                "price": 12,
-                "ingredients": [
-                    "Glycerin",
-                    "Panthenol"
-                ]
+                "name": "Simple Kind To Skin Refreshing Facial Wash",
+                "price": 375
             },
             {
-                "name": "Neutrogena Hydroboost",
-                "price": 20,
-                "ingredients": [
-                    "Hyaluronic Acid",
-                    "Glycerin"
-                ]
+                "name": "Neutrogena Oil-Free Moisture",
+                "price": 450
             }
         ],
         "home_remedies": [
