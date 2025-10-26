@@ -11,10 +11,20 @@ app = Flask(__name__)
 
 class SkinAnalysis:
     def __init__(self):
-        self.model = tf.keras.models.load_model('skin_classifier_model.h5')
-        with open('product_recommendations.json', 'r') as f:
-            self.recommendations = json.load(f)
+        # Load model with safe handling
+        try:
+            self.model = tf.keras.models.load_model('skin_classifier_model.h5')
+        except Exception as e:
+            print(f"Error loading model: {e}")
+            self.model = None
         
+        try:
+            with open('product_recommendations.json', 'r') as f:
+                self.recommendations = json.load(f)
+        except Exception:
+            self.recommendations = {}
+        
+        # Full list of questions (clean, no truncation)
         self.questions = [
             ("basic_info", "age", "What is your age?"),
             ("basic_info", "gender", "What is your gender? (Female/Male/Other)"),
@@ -29,13 +39,11 @@ class SkinAnalysis:
     def validate_face_image(self, image):
         """
         Validate that the uploaded image contains a clearly visible face
-        Returns: (is_valid, message)
         """
         try:
             # Convert PIL Image to CV2 format
             img_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
             
-            # Load multiple face detection classifiers
             face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
             face_cascade_alt = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt.xml')
             face_cascade_alt2 = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt2.xml')
@@ -104,7 +112,10 @@ class SkinAnalysis:
 
     def analyze_skin_type(self, image, answers):
         """Analyze skin type based on image and questionnaire"""
-        # Get model prediction
+        if self.model is None:
+            # If model not loaded, return a safe default
+            return "normal", 0.0, {'dry': 33.3, 'normal': 33.3, 'oily': 33.4}
+        
         img = image.resize((224, 224))
         img_array = tf.keras.preprocessing.image.img_to_array(img)
         img_array = np.expand_dims(img_array, axis=0)
@@ -155,9 +166,12 @@ def home():
 
 @app.route('/validate_image', methods=['POST'])
 def validate_image():
-    image_data = request.json['image'].split(',')[1]
-    image_bytes = base64.b64decode(image_data)
-    image = Image.open(io.BytesIO(image_bytes))
+    try:
+        image_data = request.json['image'].split(',')[1]
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(image_bytes))
+    except Exception as e:
+        return jsonify({'valid': False, 'message': f'Invalid image data: {e}'})
     
     is_valid, message = analyzer.validate_face_image(image)
     return jsonify({'valid': is_valid, 'message': message})
@@ -177,15 +191,18 @@ def get_question():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    data = request.json
-    image_data = data['image'].split(',')[1]
-    image_bytes = base64.b64decode(image_data)
-    image = Image.open(io.BytesIO(image_bytes))
+    try:
+        data = request.json
+        image_data = data['image'].split(',')[1]
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(image_bytes))
+    except Exception as e:
+        return jsonify({'error': f'Invalid image data: {e}'}), 400
     
-    answers = data['answers']
+    answers = data.get('answers', {})
     skin_type, confidence, scores = analyzer.analyze_skin_type(image, answers)
     
-    recommendations = analyzer.recommendations[skin_type]
+    recommendations = analyzer.recommendations.get(skin_type, {})
     
     return jsonify({
         'skin_type': skin_type,
@@ -194,4 +211,4 @@ def analyze():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True)
